@@ -1,0 +1,222 @@
+apiVersion: 1
+groups:
+- orgId: 1
+  name: emqx-observability
+  folder: EMQX
+  interval: 1m
+  rules:
+  - uid: emqx-fl-denials-all
+    title: EMQX unexpected FL topic denials (all actions)
+    condition: A
+    data:
+    - refId: A
+      queryType: instant
+      relativeTimeRange:
+        from: 600
+        to: 0
+      datasourceUid: loki
+      model:
+        datasource:
+          type: loki
+          uid: loki
+        editorMode: code
+        expr: sum(count_over_time({compose_service="emqx"} | json | msg="authorization_permission_denied"
+          | topic=~"msh/US/FL/.*" [5m])) > 0
+        hide: false
+        instant: true
+        intervalMs: 1000
+        maxDataPoints: 43200
+        queryType: instant
+        refId: A
+    dashboardUid: emqx-observability
+    panelId: 2
+    noDataState: OK
+    execErrState: Error
+    for: 2m
+    annotations:
+      summary: Unexpected authorization denials hit allowed FL topics.
+      description: EMQX logged one or more authorization_permission_denied events
+        for topics under msh/US/FL/# in the last 5 minutes.
+    labels:
+      service: emqx
+      severity: warning
+    isPaused: false
+  - uid: emqx-fl-denials-nosub
+    title: EMQX unexpected FL topic denials (non-SUBSCRIBE)
+    condition: A
+    data:
+    - refId: A
+      queryType: instant
+      relativeTimeRange:
+        from: 600
+        to: 0
+      datasourceUid: loki
+      model:
+        datasource:
+          type: loki
+          uid: loki
+        editorMode: code
+        expr: sum(count_over_time({compose_service="emqx", action!~"SUBSCRIBE.*"}
+          | json | msg="authorization_permission_denied" | topic=~"msh/US/FL/.*" [5m]))
+          > 0
+        hide: false
+        instant: true
+        intervalMs: 1000
+        maxDataPoints: 43200
+        queryType: instant
+        refId: A
+    dashboardUid: emqx-observability
+    panelId: 3
+    noDataState: OK
+    execErrState: Error
+    for: 2m
+    annotations:
+      summary: Unexpected non-SUBSCRIBE denials hit allowed FL topics.
+      description: EMQX logged one or more non-SUBSCRIBE authorization denials for
+        topics under msh/US/FL/# in the last 5 minutes.
+    labels:
+      service: emqx
+      severity: critical
+    isPaused: false
+  - uid: emqx-denial-spike
+    title: EMQX authorization denial spike
+    condition: A
+    data:
+    - refId: A
+      queryType: instant
+      relativeTimeRange:
+        from: 600
+        to: 0
+      datasourceUid: loki
+      model:
+        datasource:
+          type: loki
+          uid: loki
+        editorMode: code
+        expr: sum(count_over_time({compose_service="emqx"} | json | msg="authorization_permission_denied"
+          [5m])) > 50
+        hide: false
+        instant: true
+        intervalMs: 1000
+        maxDataPoints: 43200
+        queryType: instant
+        refId: A
+    dashboardUid: emqx-observability
+    panelId: 5
+    noDataState: OK
+    execErrState: Error
+    for: 5m
+    annotations:
+      summary: Authorization denials spiked above baseline.
+      description: EMQX logged more than 50 authorization_permission_denied events
+        over 5 minutes.
+    labels:
+      service: emqx
+      severity: warning
+    isPaused: false
+  - uid: emqx-error-spike
+    title: EMQX error spike
+    condition: A
+    data:
+    - refId: A
+      queryType: instant
+      relativeTimeRange:
+        from: 600
+        to: 0
+      datasourceUid: loki
+      model:
+        datasource:
+          type: loki
+          uid: loki
+        editorMode: code
+        expr: sum(count_over_time({compose_service="emqx", level="error"} [5m])) >
+          5
+        hide: false
+        instant: true
+        intervalMs: 1000
+        maxDataPoints: 43200
+        queryType: instant
+        refId: A
+    dashboardUid: emqx-observability
+    panelId: 6
+    noDataState: OK
+    execErrState: Error
+    for: 5m
+    annotations:
+      summary: EMQX errors spiked above baseline.
+      description: EMQX logged more than 5 error-level messages over 5 minutes.
+    labels:
+      service: emqx
+      severity: critical
+    isPaused: false
+  - uid: emqx-auth-failures
+    title: EMQX authentication failures detected
+    condition: A
+    data:
+    - refId: A
+      queryType: instant
+      relativeTimeRange:
+        from: 600
+        to: 0
+      datasourceUid: loki
+      model:
+        datasource:
+          type: loki
+          uid: loki
+        editorMode: code
+        expr: sum(count_over_time({compose_service="emqx"} | json | msg=~"(?i)auth.*fail|authentication.*denied|bad_username_or_password|client_authentication_failed"
+          [5m])) > 0
+        hide: false
+        instant: true
+        intervalMs: 1000
+        maxDataPoints: 43200
+        queryType: instant
+        refId: A
+    dashboardUid: emqx-observability
+    panelId: 4
+    noDataState: OK
+    execErrState: Error
+    for: 2m
+    annotations:
+      summary: Authentication failures detected.
+      description: EMQX logged one or more authentication failures in the last 5 minutes.
+    labels:
+      service: emqx
+      severity: critical
+    isPaused: false
+  - uid: emqx-no-logs
+    title: EMQX no logs received
+    condition: A
+    data:
+    - refId: A
+      queryType: instant
+      relativeTimeRange:
+        from: 1200
+        to: 0
+      datasourceUid: loki
+      model:
+        datasource:
+          type: loki
+          uid: loki
+        editorMode: code
+        expr: absent_over_time({compose_service="emqx"}[10m])
+        hide: false
+        instant: true
+        intervalMs: 1000
+        maxDataPoints: 43200
+        queryType: instant
+        refId: A
+    dashboardUid: emqx-observability
+    panelId: 1
+    noDataState: OK
+    execErrState: Error
+    for: 10m
+    annotations:
+      summary: No EMQX logs seen for 10 minutes.
+      description: No logs from the EMQX compose_service were ingested for the last
+        10 minutes. This can indicate broker downtime, Docker logging issues, or Alloy/Loki
+        ingestion problems.
+    labels:
+      service: emqx
+      severity: critical
+    isPaused: false

@@ -1,0 +1,72 @@
+logging {
+  level  = "info"
+  format = "logfmt"
+}
+
+discovery.docker "containers" {
+  host = "unix:///var/run/docker.sock"
+}
+
+discovery.relabel "logs" {
+  targets = discovery.docker.containers.targets
+
+  rule {
+    source_labels = ["__meta_docker_container_name"]
+    regex         = "/(.*)"
+    target_label  = "container"
+  }
+
+  rule {
+    source_labels = ["__meta_docker_container_log_stream"]
+    target_label  = "stream"
+  }
+
+  rule {
+    source_labels = ["__meta_docker_container_label_com_docker_compose_service"]
+    target_label  = "compose_service"
+  }
+
+  rule {
+    source_labels = ["__meta_docker_container_label_com_docker_compose_project"]
+    target_label  = "compose_project"
+  }
+}
+
+loki.process "docker_logs" {
+  forward_to = [loki.write.local.receiver]
+
+  // Only EMQX gets extra parsing/labels. Keep labels low-cardinality.
+  stage.match {
+    selector = "{compose_service=\"emqx\"}"
+
+    stage.json {
+      expressions = {
+        level  = "level",
+        tag    = "tag",
+        action = "action",
+      }
+    }
+
+    stage.labels {
+      values = {
+        level  = "",
+        tag    = "",
+        action = "",
+      }
+    }
+  }
+}
+
+loki.source.docker "containers" {
+  host          = "unix:///var/run/docker.sock"
+  targets       = discovery.docker.containers.targets
+  relabel_rules = discovery.relabel.logs.rules
+  labels        = {job = "docker"}
+  forward_to    = [loki.process.docker_logs.receiver]
+}
+
+loki.write "local" {
+  endpoint {
+    url = "http://loki:3100/loki/api/v1/push"
+  }
+}
