@@ -220,3 +220,151 @@ groups:
       service: emqx
       severity: critical
     isPaused: false
+- orgId: 1
+  name: floodgate-observability
+  folder: EMQX
+  interval: 1m
+  rules:
+  - uid: floodgate-no-logs
+    title: Floodgate no logs received
+    condition: A
+    data:
+    - refId: A
+      queryType: instant
+      relativeTimeRange:
+        from: 1200
+        to: 0
+      datasourceUid: loki
+      model:
+        datasource:
+          type: loki
+          uid: loki
+        editorMode: code
+        expr: absent_over_time({compose_service="floodgate"}[10m])
+        hide: false
+        instant: true
+        intervalMs: 1000
+        maxDataPoints: 43200
+        queryType: instant
+        refId: A
+    dashboardUid: floodgate-observability
+    panelId: 1
+    noDataState: OK
+    execErrState: Error
+    for: 10m
+    annotations:
+      summary: No floodgate logs seen for 10 minutes.
+      description: No logs from the floodgate compose_service were ingested for the
+        last 10 minutes. This can indicate application downtime, Docker logging issues,
+        or Alloy/Loki ingestion problems.
+    labels:
+      service: floodgate
+      severity: critical
+    isPaused: false
+  - uid: floodgate-no-stats
+    title: Floodgate no stats lines received
+    condition: A
+    data:
+    - refId: A
+      queryType: instant
+      relativeTimeRange:
+        from: 600
+        to: 0
+      datasourceUid: loki
+      model:
+        datasource:
+          type: loki
+          uid: loki
+        editorMode: code
+        expr: absent_over_time({compose_service="floodgate", event="stats"}[3m])
+        hide: false
+        instant: true
+        intervalMs: 1000
+        maxDataPoints: 43200
+        queryType: instant
+        refId: A
+    dashboardUid: floodgate-observability
+    panelId: 2
+    noDataState: OK
+    execErrState: Error
+    for: 3m
+    annotations:
+      summary: Floodgate stats lines stopped arriving.
+      description: No floodgate stats lines were ingested for 3 minutes. Since the
+        service logs stats every 60 seconds, this usually means the ExHook path is
+        idle or floodgate is unhealthy.
+    labels:
+      service: floodgate
+      severity: warning
+    isPaused: false
+  - uid: floodgate-error-lines
+    title: Floodgate error lines detected
+    condition: A
+    data:
+    - refId: A
+      queryType: instant
+      relativeTimeRange:
+        from: 600
+        to: 0
+      datasourceUid: loki
+      model:
+        datasource:
+          type: loki
+          uid: loki
+        editorMode: code
+        expr: sum(count_over_time({compose_service="floodgate", level="ERROR"}[5m]))
+          > 0
+        hide: false
+        instant: true
+        intervalMs: 1000
+        maxDataPoints: 43200
+        queryType: instant
+        refId: A
+    dashboardUid: floodgate-observability
+    panelId: 3
+    noDataState: OK
+    execErrState: Error
+    for: 2m
+    annotations:
+      summary: Floodgate emitted error-level logs.
+      description: One or more floodgate ERROR lines were seen in the last 5 minutes.
+    labels:
+      service: floodgate
+      severity: critical
+    isPaused: false
+  - uid: floodgate-stats-errors
+    title: Floodgate stats reported errors
+    condition: A
+    data:
+    - refId: A
+      queryType: instant
+      relativeTimeRange:
+        from: 600
+        to: 0
+      datasourceUid: loki
+      model:
+        datasource:
+          type: loki
+          uid: loki
+        editorMode: code
+        expr: sum(count_over_time({compose_service="floodgate", event="stats"} | logfmt
+          | errors > 0 [5m])) > 0
+        hide: false
+        instant: true
+        intervalMs: 1000
+        maxDataPoints: 43200
+        queryType: instant
+        refId: A
+    dashboardUid: floodgate-observability
+    panelId: 4
+    noDataState: OK
+    execErrState: Error
+    for: 2m
+    annotations:
+      summary: Floodgate stats reported non-zero errors.
+      description: At least one floodgate stats line reported errors>0 in the last
+        5 minutes.
+    labels:
+      service: floodgate
+      severity: critical
+    isPaused: false

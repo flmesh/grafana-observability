@@ -55,6 +55,73 @@ loki.process "docker_logs" {
       }
     }
   }
+
+  // Floodgate logs are plain text with a Python logger prefix and logfmt-like
+  // counters in stats lines. Promote only stable fields to labels and keep the
+  // counters in the body for query-time parsing with `| logfmt`.
+  stage.match {
+    selector = "{compose_service=\"floodgate\"}"
+
+    stage.regex {
+      expression = "^(?P<ts>\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}) (?P<level>[A-Z]+)\\s+\\[(?P<logger>[^\\]]+)\\] (?P<msg>.*)$"
+    }
+
+    stage.timestamp {
+      source = "ts"
+      format = "2006-01-02 15:04:05"
+    }
+
+    stage.labels {
+      values = {
+        level  = "",
+        logger = "",
+      }
+    }
+
+    stage.output {
+      source = "msg"
+    }
+
+    stage.match {
+      selector = "{compose_service=\"floodgate\"} |= \"Stats [last\""
+
+      stage.static_labels {
+        values = {
+          event = "stats",
+        }
+      }
+    }
+
+    stage.match {
+      selector = "{compose_service=\"floodgate\"} |= \"ExHook connected\""
+
+      stage.static_labels {
+        values = {
+          event = "connected",
+        }
+      }
+    }
+
+    stage.match {
+      selector = "{compose_service=\"floodgate\"} |= \"starting\""
+
+      stage.static_labels {
+        values = {
+          event = "startup",
+        }
+      }
+    }
+
+    stage.match {
+      selector = "{compose_service=\"floodgate\"} |= \"Health check listening\""
+
+      stage.static_labels {
+        values = {
+          event = "health_listener",
+        }
+      }
+    }
+  }
 }
 
 loki.source.docker "containers" {
