@@ -287,7 +287,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "avg_over_time({compose_service=\"floodgate\", event=\"stats\"} | logfmt | unwrap total [15m])",
+          "expr": "sum without (compose_service, compose_project, container, stream, job, logger, level, event) (avg_over_time({compose_service=\"floodgate\", event=\"stats\"} | regexp \"total=(?P<total>[0-9]+)\" | unwrap total [15m]))",
           "queryType": "range",
           "editorMode": "code",
           "legendFormat": "total"
@@ -326,7 +326,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "100 * (avg_over_time({compose_service=\"floodgate\", event=\"stats\"} | logfmt | unwrap zerohopped [15m]) / avg_over_time({compose_service=\"floodgate\", event=\"stats\"} | logfmt | unwrap total [15m]))",
+          "expr": "100 * (sum without (compose_service, compose_project, container, stream, job, logger, level, event) (avg_over_time({compose_service=\"floodgate\", event=\"stats\"} | regexp \"zerohopped=(?P<zerohopped>[0-9]+)\" | unwrap zerohopped [15m])) / sum without (compose_service, compose_project, container, stream, job, logger, level, event) (avg_over_time({compose_service=\"floodgate\", event=\"stats\"} | regexp \"total=(?P<total>[0-9]+)\" | unwrap total [15m])))",
           "queryType": "range",
           "editorMode": "code",
           "legendFormat": "zerohopped %"
@@ -365,7 +365,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "100 * (avg_over_time({compose_service=\"floodgate\", event=\"stats\"} | logfmt | unwrap skipped [15m]) / avg_over_time({compose_service=\"floodgate\", event=\"stats\"} | logfmt | unwrap total [15m]))",
+          "expr": "100 * (sum without (compose_service, compose_project, container, stream, job, logger, level, event) (avg_over_time({compose_service=\"floodgate\", event=\"stats\"} | regexp \"skipped=(?P<skipped>[0-9]+)\" | unwrap skipped [15m])) / sum without (compose_service, compose_project, container, stream, job, logger, level, event) (avg_over_time({compose_service=\"floodgate\", event=\"stats\"} | regexp \"total=(?P<total>[0-9]+)\" | unwrap total [15m])))",
           "queryType": "range",
           "editorMode": "code",
           "legendFormat": "skipped %"
