@@ -30,6 +30,12 @@
       "id": "logs",
       "name": "Logs",
       "version": ""
+    },
+    {
+      "type": "panel",
+      "id": "barchart",
+      "name": "Bar chart",
+      "version": ""
     }
   ],
   "uid": "floodgate-observability",
@@ -456,6 +462,73 @@
         "dedupStrategy": "none",
         "enableLogDetails": true,
         "prettifyLogMessage": false
+      }
+    },
+    {
+      "id": 10,
+      "type": "barchart",
+      "title": "Average Message Volume Per Channel",
+      "gridPos": {
+        "h": 9,
+        "w": 24,
+        "x": 0,
+        "y": 21
+      },
+      "datasource": {
+        "type": "loki",
+        "uid": "loki"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (channel, outcome) (count_over_time({compose_service=\"floodgate\", event=\"message\"} | json | __error__=\"\" | channel!=\"\" | outcome!=\"\" [$__range])) * 60 / $__range_s",
+          "queryType": "instant",
+          "instant": true,
+          "editorMode": "code",
+          "legendFormat": "{{channel}} {{outcome}}"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "labelsToFields",
+          "options": {
+            "mode": "columns"
+          }
+        },
+        {
+          "id": "groupingToMatrix",
+          "options": {
+            "columnField": "outcome",
+            "rowField": "channel",
+            "valueField": "Value"
+          }
+        }
+      ],
+      "options": {
+        "orientation": "vertical",
+        "xField": "channel",
+        "xTickLabelRotation": 0,
+        "xTickLabelSpacing": 0,
+        "barWidth": 0.97,
+        "barRadius": 0,
+        "colorByField": "",
+        "groupWidth": 0.7,
+        "showValue": "auto",
+        "stacking": "normal",
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
       }
     }
   ]
