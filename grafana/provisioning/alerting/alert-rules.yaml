@@ -347,7 +347,7 @@ groups:
           type: loki
           uid: loki
         editorMode: code
-        expr: sum(count_over_time({compose_service="floodgate", event="stats"} | logfmt
+        expr: sum(count_over_time({compose_service="floodgate", event="stats"} | json
           | errors > 0 [5m])) > 0
         hide: false
         instant: true

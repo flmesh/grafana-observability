@@ -41,7 +41,7 @@
   ],
   "timezone": "browser",
   "schemaVersion": 39,
-  "version": 1,
+  "version": 2,
   "refresh": "30s",
   "time": {
     "from": "now-6h",
@@ -233,7 +233,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum(count_over_time({compose_service=\"floodgate\", event=\"stats\"} | logfmt | errors > 0 [5m]))",
+          "expr": "sum(count_over_time({compose_service=\"floodgate\", event=\"stats\"} | json | errors > 0 [5m]))",
           "queryType": "range",
           "editorMode": "code"
         }
@@ -287,7 +287,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum without (compose_service, compose_project, container, stream, job, logger, level, event) (avg_over_time({compose_service=\"floodgate\", event=\"stats\"} | regexp \"total=(?P<total>[0-9]+)\" | unwrap total [15m]))",
+          "expr": "sum without (compose_service, compose_project, container, stream, job, logger, level, event) (avg_over_time({compose_service=\"floodgate\", event=\"stats\"} | json | unwrap total [15m]))",
           "queryType": "range",
           "editorMode": "code",
           "legendFormat": "total"
@@ -312,7 +312,7 @@
     {
       "id": 6,
       "type": "timeseries",
-      "title": "Zerohopped Ratio (%)",
+      "title": "Zerohop Ratio (%)",
       "gridPos": {
         "h": 8,
         "w": 8,
@@ -326,10 +326,10 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "100 * (sum without (compose_service, compose_project, container, stream, job, logger, level, event) (avg_over_time({compose_service=\"floodgate\", event=\"stats\"} | regexp \"zerohopped=(?P<zerohopped>[0-9]+)\" | unwrap zerohopped [15m])) / sum without (compose_service, compose_project, container, stream, job, logger, level, event) (avg_over_time({compose_service=\"floodgate\", event=\"stats\"} | regexp \"total=(?P<total>[0-9]+)\" | unwrap total [15m])))",
+          "expr": "100 * (sum without (compose_service, compose_project, container, stream, job, logger, level, event) (avg_over_time({compose_service=\"floodgate\", event=\"stats\"} | json | unwrap zerohop [15m])) / sum without (compose_service, compose_project, container, stream, job, logger, level, event) (avg_over_time({compose_service=\"floodgate\", event=\"stats\"} | json | unwrap total [15m])))",
           "queryType": "range",
           "editorMode": "code",
-          "legendFormat": "zerohopped %"
+          "legendFormat": "zerohop %"
         }
       ],
       "options": {
@@ -365,7 +365,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "100 * (sum without (compose_service, compose_project, container, stream, job, logger, level, event) (avg_over_time({compose_service=\"floodgate\", event=\"stats\"} | regexp \"skipped=(?P<skipped>[0-9]+)\" | unwrap skipped [15m])) / sum without (compose_service, compose_project, container, stream, job, logger, level, event) (avg_over_time({compose_service=\"floodgate\", event=\"stats\"} | regexp \"total=(?P<total>[0-9]+)\" | unwrap total [15m])))",
+          "expr": "100 * (sum without (compose_service, compose_project, container, stream, job, logger, level, event) (avg_over_time({compose_service=\"floodgate\", event=\"stats\"} | json | unwrap skipped [15m])) / sum without (compose_service, compose_project, container, stream, job, logger, level, event) (avg_over_time({compose_service=\"floodgate\", event=\"stats\"} | json | unwrap total [15m])))",
           "queryType": "range",
           "editorMode": "code",
           "legendFormat": "skipped %"
