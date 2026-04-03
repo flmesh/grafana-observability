@@ -287,7 +287,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum without (compose_service, compose_project, container, stream, job, logger, level, event) (avg_over_time({compose_service=\"floodgate\", event=\"stats\"} | json | unwrap total [15m]))",
+          "expr": "avg(avg_over_time({compose_service=\"floodgate\", event=\"stats\"} | json | __error__=\"\" | unwrap total [15m]))",
           "queryType": "range",
           "editorMode": "code",
           "legendFormat": "total"
@@ -326,7 +326,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "100 * (sum without (compose_service, compose_project, container, stream, job, logger, level, event) (avg_over_time({compose_service=\"floodgate\", event=\"stats\"} | json | unwrap zerohop [15m])) / sum without (compose_service, compose_project, container, stream, job, logger, level, event) (avg_over_time({compose_service=\"floodgate\", event=\"stats\"} | json | unwrap total [15m])))",
+          "expr": "100 * (sum(sum_over_time({compose_service=\"floodgate\", event=\"stats\"} | json | __error__=\"\" | unwrap zerohop [15m])) / sum(sum_over_time({compose_service=\"floodgate\", event=\"stats\"} | json | __error__=\"\" | unwrap total [15m])))",
           "queryType": "range",
           "editorMode": "code",
           "legendFormat": "zerohop %"
@@ -365,7 +365,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "100 * (sum without (compose_service, compose_project, container, stream, job, logger, level, event) (avg_over_time({compose_service=\"floodgate\", event=\"stats\"} | json | unwrap skipped [15m])) / sum without (compose_service, compose_project, container, stream, job, logger, level, event) (avg_over_time({compose_service=\"floodgate\", event=\"stats\"} | json | unwrap total [15m])))",
+          "expr": "100 * (sum(sum_over_time({compose_service=\"floodgate\", event=\"stats\"} | json | __error__=\"\" | unwrap skipped [15m])) / sum(sum_over_time({compose_service=\"floodgate\", event=\"stats\"} | json | __error__=\"\" | unwrap total [15m])))",
           "queryType": "range",
           "editorMode": "code",
           "legendFormat": "skipped %"
