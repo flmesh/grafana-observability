@@ -26,6 +26,11 @@ jobs:
           source .env
           set +a
 
+          {
+            echo "GF_SECURITY_ADMIN_USER=$GF_SECURITY_ADMIN_USER"
+            echo "GF_SECURITY_ADMIN_PASSWORD=$GF_SECURITY_ADMIN_PASSWORD"
+          } >> "$GITHUB_ENV"
+
       - name: Render compose config
         run: docker compose config
 
