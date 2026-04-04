@@ -1,0 +1,166 @@
+name: Compose Validation
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  validate-compose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Prepare test environment
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          ln -sf .env.test .env
+
+          set -a
+          source .env
+          set +a
+
+      - name: Render compose config
+        run: docker compose config
+
+      - name: Start stack
+        run: docker compose up -d
+
+      - name: Wait for services to become healthy
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          wait_for_service() {
+            local service="$1"
+            local timeout_secs="$2"
+            local start_ts
+            local container_id
+            local state
+            local health
+
+            start_ts="$(date +%s)"
+            container_id="$(docker compose ps -q "$service")"
+
+            if [ -z "$container_id" ]; then
+              echo "No container found for service: $service"
+              return 1
+            fi
+
+            while true; do
+              state="$(docker inspect --format '{{.State.Status}}' "$container_id")"
+              health="$(docker inspect --format '{{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}}' "$container_id")"
+
+              echo "$service state=$state health=$health"
+
+              if [ "$state" = "running" ] && [ "$health" = "healthy" ]; then
+                return 0
+              fi
+
+              if [ "$state" = "exited" ] || [ "$state" = "dead" ]; then
+                echo "$service is not running"
+                return 1
+              fi
+
+              if [ "$(($(date +%s) - start_ts))" -ge "$timeout_secs" ]; then
+                echo "Timed out waiting for $service"
+                return 1
+              fi
+
+              sleep 5
+            done
+          }
+
+          wait_for_service loki 120
+          wait_for_service alloy 120
+          wait_for_service grafana 120
+
+      - name: Verify provisioned dashboards load via Grafana API
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          grafana_url="http://127.0.0.1:3000"
+          auth="${GF_SECURITY_ADMIN_USER}:${GF_SECURITY_ADMIN_PASSWORD}"
+
+          wait_for_grafana_api() {
+            local timeout_secs="$1"
+            local start_ts
+            local status
+
+            start_ts="$(date +%s)"
+
+            while true; do
+              status="$(curl -sS -o /tmp/grafana-health.json -w '%{http_code}' \
+                -u "$auth" \
+                "$grafana_url/api/health" || true)"
+
+              if [ "$status" = "200" ]; then
+                return 0
+              fi
+
+              if [ "$(($(date +%s) - start_ts))" -ge "$timeout_secs" ]; then
+                echo "Timed out waiting for Grafana API"
+                cat /tmp/grafana-health.json 2>/dev/null || true
+                return 1
+              fi
+
+              sleep 5
+            done
+          }
+
+          wait_for_grafana_api 120
+
+          python3 <<'PY' > /tmp/provisioned-dashboards.tsv
+          import glob
+          import json
+
+          for path in sorted(glob.glob("grafana/dashboards/*.json")):
+              with open(path, "r", encoding="utf-8") as fh:
+                  doc = json.load(fh)
+              uid = doc.get("uid")
+              title = doc.get("title", "")
+              if not uid:
+                  raise SystemExit(f"Dashboard file missing uid: {path}")
+              print(f"{uid}\t{title}\t{path}")
+          PY
+
+          while IFS=$'\t' read -r uid title path; do
+            echo "Checking dashboard uid=$uid title=$title"
+
+            status="$(curl -sS -o /tmp/dashboard.json -w '%{http_code}' \
+              -u "$auth" \
+              "$grafana_url/api/dashboards/uid/$uid")"
+
+            if [ "$status" != "200" ]; then
+              echo "Dashboard query failed for uid=$uid from $path"
+              cat /tmp/dashboard.json
+              exit 1
+            fi
+
+            returned_uid="$(python3 -c 'import json; print(json.load(open("/tmp/dashboard.json", "r", encoding="utf-8"))["dashboard"]["uid"])')"
+
+            if [ "$returned_uid" != "$uid" ]; then
+              echo "Dashboard uid mismatch for $path: expected $uid got $returned_uid"
+              cat /tmp/dashboard.json
+              exit 1
+            fi
+          done < /tmp/provisioned-dashboards.tsv
+
+      - name: Show compose status
+        if: always()
+        run: docker compose ps
+
+      - name: Show compose logs on failure
+        if: failure()
+        run: docker compose logs --no-color
+
+      - name: Tear down stack
+        if: always()
+        run: docker compose down -v
