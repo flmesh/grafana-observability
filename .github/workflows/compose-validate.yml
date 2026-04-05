@@ -38,7 +38,7 @@ jobs:
         run: docker compose config
 
       - name: Start stack
-        run: docker compose up -d
+        run: docker compose up -d loki alloy grafana
 
       - name: Wait for services to become healthy
         shell: bash

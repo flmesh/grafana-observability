@@ -7,12 +7,15 @@ The stack provisions:
 - Grafana for dashboards and alerting
 - Loki for log storage and querying
 - Grafana Alloy for Docker log discovery, relabeling, and forwarding
+- Redis for Hubot brain persistence and short-lived caching
+- Hubot colocated with Loki for Discord bot access to logs
 
 Logs are collected from the Docker socket, labeled with Compose metadata, shipped to Loki, and surfaced in prebuilt Grafana dashboards and alert rules for the Florida Mesh MQTT environment.
 
 ## What This Repository Contains
 
 - `docker-compose.yml`: local stack definition for Loki, Alloy, and Grafana
+- Redis and Hubot services colocated with the observability stack
 - `alloy/config.alloy`: Docker log discovery, relabeling, parsing, and forwarding rules
 - `loki/config.yaml`: single-node Loki configuration backed by a local volume
 - `grafana/provisioning/datasources/loki.yaml`: provisioned Loki datasource
@@ -43,6 +46,8 @@ The included dashboards and alert rules are tuned around that environment, espec
 - MQTT broker authentication and authorization failures
 - unexpected denials on Florida topic paths under `msh/US/FL/#`
 - Floodgate service availability, stats emissions, and error lines
+
+Hubot is colocated with Loki so the bot can query the same log store without depending on the EMQX deployment host.
 
 ## Provisioned Content
 
@@ -80,12 +85,31 @@ GF_SECURITY_ADMIN_USER=admin
 GF_SECURITY_ADMIN_PASSWORD=change-this-now
 ```
 
+To run Hubot successfully, `.env` also needs:
+
+```env
+HUBOT_DISCORD_TOKEN=your-discord-bot-token
+HUBOT_NAME=MeshBot
+HUBOT_LOG_LEVEL=info
+REDIS_URL=redis://redis:6379
+LOKI_URL=http://loki:3100
+LOKI_USERNAME=
+LOKI_PASSWORD=
+NODE_LOGS_CACHE_TTL_SECONDS=30
+```
+
 ## Getting Started
 
 Use the test environment values:
 
 ```bash
 ln -sf .env.test .env
+docker compose up -d loki alloy grafana
+```
+
+To start the full deployed stack, including Redis and Hubot:
+
+```bash
 docker compose up -d
 ```
 
@@ -105,13 +129,16 @@ docker compose down -v
 
 ## Healthchecks
 
-The Compose stack includes healthchecks for all three services:
+The observability services include healthchecks for:
 
 - Loki validates its config with the Loki binary
 - Alloy checks its readiness endpoint on port `12345`
 - Grafana checks `/api/health` on port `3000`
 
 Compose also waits for Loki to become healthy before starting Alloy and Grafana.
+
+- Redis is health-checked with `redis-cli ping`
+- Hubot waits for both Loki and Redis before starting
 
 ## Log Labeling and Parsing
 
@@ -135,10 +162,12 @@ The Alloy config deliberately keeps labels low-cardinality and leaves most struc
 The GitHub Actions workflow in `.github/workflows/compose-validate.yml` validates that:
 
 - the Compose file renders successfully
-- the stack starts successfully
-- all services report healthy
+- the observability services start successfully
+- Loki, Alloy, and Grafana report healthy
 - Grafana provisions the dashboards defined in `grafana/dashboards/`
 - provisioned dashboards can be retrieved through the Grafana HTTP API
+
+The workflow intentionally does not start Hubot because a real `HUBOT_DISCORD_TOKEN` is not available in CI for this repository.
 
 ## Repository Layout
 
@@ -161,4 +190,5 @@ The GitHub Actions workflow in `.github/workflows/compose-validate.yml` validate
 
 - Grafana state is stored in the `grafana-data` volume.
 - Loki data is stored in the `loki-data` volume.
+- Redis brain/cache state is stored in the `redis-data` volume.
 - This repository is focused on observability infrastructure and provisioned assets for Florida Mesh; it does not include the EMQX or Floodgate application services themselves.
