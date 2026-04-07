@@ -35,7 +35,7 @@ services:
     restart: unless-stopped
 
   hubot:
-    image: ghcr.io/flmesh/hubot:latest
+    image: ghcr.io/flmesh/hubot:1
     container_name: hubot
     env_file:
       - .env
