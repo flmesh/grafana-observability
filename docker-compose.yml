@@ -35,7 +35,8 @@ services:
     restart: unless-stopped
 
   hubot:
-    image: ghcr.io/flmesh/hubot:latest
+    image: ghcr.io/flmesh/hubot:${HUBOT_IMAGE_TAG:-1}
+    pull_policy: always
     container_name: hubot
     env_file:
       - .env
