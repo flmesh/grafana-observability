@@ -1,0 +1,102 @@
+queue_rules:
+  - name: default
+    batch_size: 1
+    batch_max_wait_time: 1 m
+
+pull_request_rules:
+  - name: Label Renovate PRs
+    conditions:
+      - author=renovate[bot]
+    actions:
+      label:
+        add:
+          - dependencies
+          - automated
+
+  - name: Label Dependabot PRs
+    conditions:
+      - author=dependabot[bot]
+    actions:
+      label:
+        add:
+          - dependencies
+          - automated
+
+  - name: Label Other Bot PRs
+    conditions:
+      - author~=\[bot\]$
+      - -author=renovate[bot]
+      - -author=dependabot[bot]
+    actions:
+      label:
+        add:
+          - automated
+
+  - name: Label Docs PRs
+    conditions:
+      - files~=\.md$
+    actions:
+      label:
+        add:
+          - area/docs
+
+  - name: Label Docker PRs
+    conditions:
+      - files~=^(Dockerfile|docker-compose\.yml)$
+    actions:
+      label:
+        add:
+          - area/docker
+          - needs/manual-test
+
+  - name: Label Observability PRs
+    conditions:
+      - files~=^(alloy/.*|grafana/.*|loki/.*)$
+    actions:
+      label:
+        add:
+          - area/observability
+
+  - name: Label High Risk PRs
+    conditions:
+      - files~=^(\.github/workflows/.*|grafana/provisioning/alerting/.*|loki/config\.yaml)$
+    actions:
+      label:
+        add:
+          - risk/high
+          - needs/manual-test
+
+  - name: Label CI PRs
+    conditions:
+      - files~=^\.github/workflows/.*
+    actions:
+      label:
+        add:
+          - area/ci
+
+  - name: Label Dependency Manifest PRs
+    conditions:
+      - files~=^(package\.json|package-lock\.json)$
+    actions:
+      label:
+        add:
+          - area/deps
+
+  - name: Auto-queue ready PRs on main
+    conditions:
+      - base=main
+      - -draft
+      - "#approved-reviews-by>=1"
+    actions:
+      queue:
+        name: default
+
+merge_protections:
+  - name: Do not merge outdated PRs
+    description: Make sure PRs are almost up to date before merging
+    if:
+      - base = main
+    success_conditions:
+      - "#commits-behind <= 10"
+merge_protections_settings:
+  reporting_method: check-runs
