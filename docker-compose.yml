@@ -74,7 +74,7 @@ services:
     restart: unless-stopped
 
   alloy:
-    image: grafana/alloy:v1.15.1
+    image: grafana/alloy:v1.16.0
     container_name: alloy
     command:
       - run
