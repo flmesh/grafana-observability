@@ -23,6 +23,8 @@ services:
   redis:
     image: redis:8-alpine
     container_name: redis
+    labels:
+      - "com.centurylinklabs.watchtower.enable=true"
     command: ["redis-server", "--appendonly", "yes"]
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
@@ -38,6 +40,8 @@ services:
     image: ghcr.io/flmesh/hubot:${HUBOT_IMAGE_TAG:-1}
     pull_policy: always
     container_name: hubot
+    labels:
+      - "com.centurylinklabs.watchtower.enable=true"
     env_file:
       - .env
     environment:
@@ -55,8 +59,9 @@ services:
       MONGO_AUTH_SOURCE: ${MONGO_AUTH_SOURCE:-mqtt}
       MONGO_URL: ${MONGO_URL:-}
       MONGO_DB_NAME: ${MONGO_DB_NAME:-mqtt}
+      HUBOT_DISCORD_PERMISSION_GUILD_ID: ${HUBOT_DISCORD_PERMISSION_GUILD_ID:-}
+      MQTT_ADMIN_GUILD_ID: ${MQTT_ADMIN_GUILD_ID:-}
       MQTT_ADMIN_ROLE_IDS: ${MQTT_ADMIN_ROLE_IDS:-}
-      MQTT_ADMIN_ROLE_NAMES: ${MQTT_ADMIN_ROLE_NAMES:-}
     extra_hosts:
       - "host.docker.internal:host-gateway"
     init: true
@@ -103,6 +108,8 @@ services:
   grafana:
     image: grafana/grafana:latest
     container_name: grafana
+    labels:
+      - "com.centurylinklabs.watchtower.enable=true"
     env_file:
       - .env
     ports:
@@ -121,6 +128,22 @@ services:
       loki:
         condition: service_healthy
     restart: unless-stopped
+
+  watchtower:
+    image: containrrr/watchtower:latest
+    container_name: watchtower
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      DOCKER_API_VERSION: "1.40"
+      WATCHTOWER_LABEL_ENABLE: true
+      WATCHTOWER_CLEANUP: true
+      WATCHTOWER_SCHEDULE: "@hourly"
+      WATCHTOWER_INCLUDE_RESTARTING: true
+      TZ: America/New_York
 
 volumes:
   loki-data:
