@@ -56,6 +56,28 @@ loki.process "docker_logs" {
     }
   }
 
+
+
+  // MongoDB logs are JSON. Extract only low-cardinality labels and leave
+  // attributes in the body for query-time inspection.
+  stage.match {
+    selector = "{compose_service=\"mongodb\"}"
+
+    stage.json {
+      expressions = {
+        level     = "s",
+        component = "c",
+      }
+    }
+
+    stage.labels {
+      values = {
+        level     = "",
+        component = "",
+      }
+    }
+  }
+
   // Floodgate logs use structured JSON format (python-json-logger) from v0.2.1+.
   // Extract labels from JSON fields and keep the full body for query-time | json parsing.
   stage.match {

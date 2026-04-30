@@ -368,3 +368,146 @@ groups:
       service: floodgate
       severity: critical
     isPaused: false
+
+- orgId: 1
+  name: mongodb-observability
+  folder: EMQX
+  interval: 1m
+  rules:
+  - uid: mongodb-no-logs
+    title: MongoDB no logs received
+    condition: A
+    data:
+    - refId: A
+      queryType: instant
+      relativeTimeRange:
+        from: 1200
+        to: 0
+      datasourceUid: loki
+      model:
+        datasource:
+          type: loki
+          uid: loki
+        editorMode: code
+        expr: absent_over_time({compose_service="mongodb"}[10m])
+        hide: false
+        instant: true
+        intervalMs: 1000
+        maxDataPoints: 43200
+        queryType: instant
+        refId: A
+    dashboardUid: mongodb-observability
+    panelId: 1
+    noDataState: OK
+    execErrState: Error
+    for: 10m
+    annotations:
+      summary: No MongoDB logs seen for 10 minutes.
+      description: No logs from the mongodb compose_service were ingested for the last 10 minutes. This can indicate MongoDB downtime, Docker logging issues, or Alloy/Loki ingestion problems.
+    labels:
+      service: mongodb
+      severity: critical
+    isPaused: false
+  - uid: mongodb-error-lines
+    title: MongoDB error or fatal lines detected
+    condition: A
+    data:
+    - refId: A
+      queryType: instant
+      relativeTimeRange:
+        from: 600
+        to: 0
+      datasourceUid: loki
+      model:
+        datasource:
+          type: loki
+          uid: loki
+        editorMode: code
+        expr: sum(count_over_time({compose_service="mongodb", level=~"E|F"}[5m])) > 0
+        hide: false
+        instant: true
+        intervalMs: 1000
+        maxDataPoints: 43200
+        queryType: instant
+        refId: A
+    dashboardUid: mongodb-observability
+    panelId: 2
+    noDataState: OK
+    execErrState: Error
+    for: 2m
+    annotations:
+      summary: MongoDB emitted error or fatal logs.
+      description: One or more MongoDB E/F severity log entries were seen in the last 5 minutes.
+    labels:
+      service: mongodb
+      severity: critical
+    isPaused: false
+  - uid: mongodb-auth-failures
+    title: MongoDB authentication failures detected
+    condition: A
+    data:
+    - refId: A
+      queryType: instant
+      relativeTimeRange:
+        from: 600
+        to: 0
+      datasourceUid: loki
+      model:
+        datasource:
+          type: loki
+          uid: loki
+        editorMode: code
+        expr: sum(count_over_time({compose_service="mongodb", component="ACCESS"} | json | msg="Authentication failed" [5m])) > 0
+        hide: false
+        instant: true
+        intervalMs: 1000
+        maxDataPoints: 43200
+        queryType: instant
+        refId: A
+    dashboardUid: mongodb-observability
+    panelId: 3
+    noDataState: OK
+    execErrState: Error
+    for: 2m
+    annotations:
+      summary: MongoDB authentication failures detected.
+      description: MongoDB logged one or more authentication failures in the last 5 minutes. This can break EMQX authn/authz if the failing user is the broker user.
+    labels:
+      service: mongodb
+      severity: critical
+    isPaused: false
+  - uid: emqx-mongodb-driver-crashes
+    title: EMQX MongoDB driver crashes detected
+    condition: A
+    data:
+    - refId: A
+      queryType: instant
+      relativeTimeRange:
+        from: 1200
+        to: 0
+      datasourceUid: loki
+      model:
+        datasource:
+          type: loki
+          uid: loki
+        editorMode: code
+        expr: sum(count_over_time({compose_service="emqx", level="error"} |~ "mc_monitor|mongodb/src/mongoc|emqx_authn_mongodb|emqx_authz_mongodb" [15m])) > 0
+        hide: false
+        instant: true
+        intervalMs: 1000
+        maxDataPoints: 43200
+        queryType: instant
+        refId: A
+    dashboardUid: mongodb-observability
+    panelId: 4
+    noDataState: OK
+    execErrState: Error
+    for: 2m
+    annotations:
+      summary: EMQX logged MongoDB driver errors.
+      description: EMQX emitted MongoDB driver/authn/authz related error logs, including possible mc_monitor crashes. Check MongoDB availability and auth latency.
+    labels:
+      service: emqx
+      dependency: mongodb
+      severity: critical
+    isPaused: false

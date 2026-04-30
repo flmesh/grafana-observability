@@ -40,12 +40,14 @@ This stack is intended to monitor:
 
 - the Florida Mesh EMQX broker serving `mqtt.areyoumeshingwith.us`
 - the associated Floodgate services that support that MQTT deployment
+- the MongoDB service used by EMQX for MQTT authentication and authorization
 
 The included dashboards and alert rules are tuned around that environment, especially:
 
 - MQTT broker authentication and authorization failures
 - unexpected denials on Florida topic paths under `msh/US/FL/#`
 - Floodgate service availability, stats emissions, and error lines
+- MongoDB availability, error logs, authentication failures, and EMQX MongoDB driver crashes
 
 Hubot is colocated with Loki so the bot can query the same log store without depending on the EMQX deployment host.
 
@@ -55,6 +57,7 @@ Hubot is colocated with Loki so the bot can query the same log store without dep
 
 - `EMQX Observability` (`emqx-observability`)
 - `Floodgate Observability` (`floodgate-observability`)
+- `MongoDB Observability` (`mongodb-observability`)
 
 ### Alert Groups
 
@@ -70,6 +73,11 @@ Hubot is colocated with Loki so the bot can query the same log store without dep
   - Floodgate no stats lines received
   - Floodgate error lines detected
   - Floodgate stats reported errors
+- `mongodb-observability`
+  - MongoDB no logs received
+  - MongoDB error or fatal lines detected
+  - MongoDB authentication failures detected
+  - EMQX MongoDB driver crashes detected
 
 ## Prerequisites
 
@@ -154,6 +162,7 @@ Additional parsing is applied selectively:
 
 - EMQX logs: extracts `level`, `tag`, and `action`
 - Floodgate logs: extracts `level`, `logger`, `event`, and structured timestamps
+- MongoDB logs: extracts `level` and `component` from MongoDB JSON logs
 
 The Alloy config deliberately keeps labels low-cardinality and leaves most structured fields in the log body for query-time parsing in Loki.
 
